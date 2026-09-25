@@ -140,7 +140,7 @@ if user_role == "Teacher Dashboard":
                 """
                 with st.spinner(f"Building lesson plan for {selected_class}..."):
                     try:
-                        res = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                        res = client.models.generate_content(model="gemini-2.5-flash" # or "gemini-1.5-flash"", contents=prompt)
                         st.markdown(res.text)
                         st.session_state["latest_lesson_plan"] = res.text
                         st.download_button("📥 Download Lesson Plan (.txt)", res.text, file_name=f"Lesson_{selected_class}_{selected_term}_{selected_week}.txt")
