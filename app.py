@@ -197,7 +197,7 @@ if user_role == "Teacher Dashboard":
                 """
                 with st.spinner("Building assessment and answer keys..."):
                     try:
-                        res = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                        res = client.models.generate_content(model="gemini-2.5-flash" # or "gemini-1.5-flash", contents=prompt)
                         st.markdown(res.text)
                         st.download_button("📥 Download Assessment (.txt)", res.text, file_name=f"Assessment_{selected_class}_{selected_term}_{selected_week}.txt")
                     except Exception as e:
@@ -228,7 +228,7 @@ if user_role == "Teacher Dashboard":
                     """
                     with st.spinner("Formulating strategy..."):
                         try:
-                            res = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                            res = client.models.generate_content(model="gemini-2.5-flash" # or "gemini-1.5-flash", contents=prompt)
                             st.markdown(res.text)
                             st.download_button("📥 Download Support Plan (.txt)", res.text, file_name=f"Support_Plan_{selected_class}_{selected_week}.txt")
                         except Exception as e:
@@ -285,7 +285,7 @@ else:
                 """
                 with st.spinner("Preparing your personalized exercise..."):
                     try:
-                        res = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+                        res = client.models.generate_content(model="gemini-2.5-flash" # or "gemini-1.5-flash", contents=prompt)
                         st.markdown(res.text)
                     except Exception as e:
                         st.error(f"Error loading practice: {e}")
