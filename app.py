@@ -14,7 +14,6 @@ def get_gemini_client():
     if not api_key and "manual_api_key" in st.session_state:
         api_key = st.session_state["manual_api_key"]
     
-    # Strip any accidental whitespace or quotes
     if api_key:
         api_key = api_key.strip().strip('"').strip("'")
         
@@ -81,7 +80,6 @@ if user_role == "Teacher Dashboard":
         selected_class = st.selectbox("Select Target Section", ["12 Gen 1", "12 Gen 2", "12 Advanced 1", "12 Advanced 2", "All Grade 12 Sections"])
         selected_term = st.selectbox("Select Academic Term", ["Term 1", "Term 2", "Term 3"])
         
-        # Dynamic weeks based on term
         weeks_list = [f"Week {i}" for i in range(1, 14)]
         selected_week = st.selectbox("Select Academic Week", weeks_list)
 
@@ -112,7 +110,7 @@ if user_role == "Teacher Dashboard":
         if st.button("🚀 Generate Lesson Plan", type="primary", key="btn_lesson"):
             client = get_gemini_client()
             if client:
-                prompt = f"""
+                prompt_text = f"""
                 You are an expert master teacher and curriculum developer.
                 Generate a structured, interactive 3-part lesson plan based on the following context.
 
@@ -140,7 +138,10 @@ if user_role == "Teacher Dashboard":
                 """
                 with st.spinner(f"Building lesson plan for {selected_class}..."):
                     try:
-                        res = client.models.generate_content(model="gemini-2.5-flash")
+                        res = client.models.generate_content(
+                            model="gemini-2.5-flash",
+                            contents=prompt_text
+                        )
                         st.markdown(res.text)
                         st.session_state["latest_lesson_plan"] = res.text
                         st.download_button("📥 Download Lesson Plan (.txt)", res.text, file_name=f"Lesson_{selected_class}_{selected_term}_{selected_week}.txt")
@@ -185,7 +186,7 @@ if user_role == "Teacher Dashboard":
         if st.button("📝 Generate Assessment", type="primary", key="btn_assess"):
             client = get_gemini_client()
             if client:
-                prompt = f"""
+                prompt_text = f"""
                 Create a {assess_type} with {num_q} questions for {selected_class} ({selected_term}, {selected_week}).
                 Included Formats: {', '.join(q_types)}
 
@@ -197,7 +198,10 @@ if user_role == "Teacher Dashboard":
                 """
                 with st.spinner("Building assessment and answer keys..."):
                     try:
-                        res = client.models.generate_content(model="gemini-2.5-flash")
+                        res = client.models.generate_content(
+                            model="gemini-2.5-flash",
+                            contents=prompt_text
+                        )
                         st.markdown(res.text)
                         st.download_button("📥 Download Assessment (.txt)", res.text, file_name=f"Assessment_{selected_class}_{selected_term}_{selected_week}.txt")
                     except Exception as e:
@@ -215,7 +219,7 @@ if user_role == "Teacher Dashboard":
             else:
                 client = get_gemini_client()
                 if client:
-                    prompt = f"""
+                    prompt_text = f"""
                     Analyze student performance data for {selected_class} ({selected_term}, {selected_week}):
                     Data/Notes: {obs_data}
                     Timeline: {support_goal}
@@ -228,7 +232,10 @@ if user_role == "Teacher Dashboard":
                     """
                     with st.spinner("Formulating strategy..."):
                         try:
-                            res = client.models.generate_content(model="gemini-2.5-flash")
+                            res = client.models.generate_content(
+                                model="gemini-2.5-flash",
+                                contents=prompt_text
+                            )
                             st.markdown(res.text)
                             st.download_button("📥 Download Support Plan (.txt)", res.text, file_name=f"Support_Plan_{selected_class}_{selected_week}.txt")
                         except Exception as e:
@@ -270,7 +277,7 @@ else:
         if st.button("✨ Start Practice Exercise", type="primary", key="btn_student_practice"):
             client = get_gemini_client()
             if client:
-                prompt = f"""
+                prompt_text = f"""
                 You are an encouraging, supportive English AI Tutor.
                 Student Name: {student_name}
                 Class Section: {student_class}
@@ -285,7 +292,10 @@ else:
                 """
                 with st.spinner("Preparing your personalized exercise..."):
                     try:
-                        res = client.models.generate_content(model="gemini-2.5-flash")
+                        res = client.models.generate_content(
+                            model="gemini-2.5-flash",
+                            contents=prompt_text
+                        )
                         st.markdown(res.text)
                     except Exception as e:
                         st.error(f"Error loading practice: {e}")
