@@ -13,10 +13,20 @@ def get_gemini_client():
     api_key = st.secrets.get("GEMINI_API_KEY", None)
     if not api_key and "manual_api_key" in st.session_state:
         api_key = st.session_state["manual_api_key"]
+    
+    # Strip any accidental whitespace or quotes
+    if api_key:
+        api_key = api_key.strip().strip('"').strip("'")
+        
     if not api_key:
         st.error("⚠️ No Gemini API Key found. Please check Secrets or enter it in the sidebar.")
         return None
-    return genai.Client(api_key=api_key)
+        
+    try:
+        return genai.Client(api_key=api_key)
+    except Exception as e:
+        st.error(f"Failed to initialize Gemini Client: {e}")
+        return None
 
 def extract_text_from_files(files) -> str:
     """Parses PDF and TXT documents safely."""
