@@ -1,5 +1,6 @@
 import streamlit as st
 import PyPDF2
+from pptx import Presentation
 from google import genai
 
 # Page Setup
@@ -28,21 +29,41 @@ def get_gemini_client():
         return None
 
 def extract_text_from_files(files) -> str:
-    """Parses PDF and TXT documents safely."""
+    """Parses PDF, TXT, and PPTX documents safely."""
     combined_text = ""
     for file in files:
         combined_text += f"\n--- Document: {file.name} ---\n"
-        if file.type == "application/pdf":
+        
+        # Handle PDFs
+        if file.type == "application/pdf" or file.name.endswith(".pdf"):
             try:
                 reader = PyPDF2.PdfReader(file)
-                for page in reader.pages:
+                for i, page in enumerate(reader.pages):
                     extracted = page.extract_text()
                     if extracted:
-                        combined_text += extracted + "\n"
+                        combined_text += f"[PDF Page {i+1}]\n{extracted}\n"
             except Exception as e:
-                st.sidebar.error(f"Could not read {file.name}: {e}")
-        elif file.type == "text/plain":
+                st.sidebar.error(f"Could not read PDF {file.name}: {e}")
+                
+        # Handle PowerPoints (.pptx)
+        elif file.name.endswith(".pptx"):
+            try:
+                prs = Presentation(file)
+                for slide_idx, slide in enumerate(prs.slides):
+                    combined_text += f"[Slide {slide_idx + 1}]\n"
+                    for shape in slide.shapes:
+                        if shape.has_text_frame:
+                            for paragraph in shape.text_frame.paragraphs:
+                                text = paragraph.text.strip()
+                                if text:
+                                    combined_text += f"- {text}\n"
+            except Exception as e:
+                st.sidebar.error(f"Could not read PowerPoint {file.name}: {e}")
+                
+        # Handle Plain Text (.txt)
+        elif file.type == "text/plain" or file.name.endswith(".txt"):
             combined_text += file.getvalue().decode("utf-8") + "\n"
+            
         combined_text += f"--- End of Document: {file.name} ---\n"
     return combined_text
 
@@ -84,13 +105,22 @@ if user_role == "Teacher Dashboard":
         selected_week = st.selectbox("Select Academic Week", weeks_list)
 
         st.divider()
-        st.header("📄 Curriculum Context Vault")
-        uploaded_files = st.file_uploader("Upload Scope & Sequence (PDF/TXT)", type=["pdf", "txt"], accept_multiple_files=True)
+        st.header("📄 Curriculum & Materials Vault")
+        uploaded_files = st.file_uploader(
+            "Upload Scope & Sequence and PPT Presentations (PDF, PPTX, TXT)", 
+            type=["pdf", "pptx", "txt"], 
+            accept_multiple_files=True
+        )
 
         if uploaded_files:
             if st.button("💾 Process Uploaded Files"):
                 st.session_state["curriculum_text"] = extract_text_from_files(uploaded_files)
-                st.success(f"Loaded {len(uploaded_files)} file(s) into memory!")
+                st.success(f"Loaded {len(uploaded_files)} file(s) into memory ({len(st.session_state['curriculum_text'])} characters extracted)!")
+
+        # Preview uploaded text to confirm it was parsed correctly
+        if st.session_state["curriculum_text"]:
+            with st.expander("🔍 Preview Extracted Material Context"):
+                st.text(st.session_state["curriculum_text"][:2500] + "\n... [Truncated]")
 
     # Teacher Functional Tabs
     tab1, tab2, tab3, tab4 = st.tabs([
@@ -103,40 +133,44 @@ if user_role == "Teacher Dashboard":
     # TAB 1: Lesson Planner
     with tab1:
         st.header(f"Lesson Planner: {selected_class} — {selected_term}, {selected_week}")
-        topic = st.text_input("Topic / Objective Focus (Leave blank to auto-extract from uploaded Scope & Sequence)")
+        topic = st.text_input("Topic / Focus (Leave blank to extract automatically from uploaded files)")
         duration = st.selectbox("Lesson Duration", ["45 Minutes", "60 Minutes", "90 Minutes (Block)"])
-        notes = st.text_area("Specific Section Requirements / Notes", placeholder="e.g., 12 Gen 1 needs extra vocabulary practice; prepare sentence frames...")
+        notes = st.text_area("Slide Alterations / Customization Notes", placeholder="e.g., Modify slide 4 activity to include sentence frames for 12 Gen 1; expand the vocabulary slide...")
 
         if st.button("🚀 Generate Lesson Plan", type="primary", key="btn_lesson"):
             client = get_gemini_client()
             if client:
                 prompt_text = f"""
-                You are an expert master teacher and curriculum developer.
-                Generate a structured, interactive 3-part lesson plan based on the following context.
+                CRITICAL INSTRUCTIONS:
+                1. Look up {selected_term} and {selected_week} from the uploaded curriculum files.
+                2. If PowerPoint (.pptx) content is provided in the materials context below, extract key slide points, examples, or activities and weave them directly into the lesson plan.
+                3. Apply any user-specified slide alterations or notes directly into the generated tasks.
 
                 Target Section: {selected_class}
                 Academic Pacing: {selected_term}, {selected_week}
                 Lesson Duration: {duration}
-                Topic/Focus: {topic if topic else 'Extract the exact topic and skill for this Term and Week from the curriculum context below.'}
-                Section Notes: {notes}
+                Topic/Focus: {topic if topic else 'EXTRACT DIRECTLY FROM THE UPLOADED MATERIALS FOR THIS TERM AND WEEK'}
+                User Modifications / Notes: {notes}
 
-                --- UPLOADED CURRICULUM CONTEXT ---
-                {st.session_state['curriculum_text'] if st.session_state['curriculum_text'] else 'Standard Grade 12 English curriculum competencies.'}
-                -----------------------------------
+                --- START OF UPLOADED MATERIALS & SLIDE CONTEXT ---
+                {st.session_state['curriculum_text'] if st.session_state['curriculum_text'] else 'No files uploaded. Use standard Grade 12 competencies.'}
+                --- END OF UPLOADED MATERIALS & SLIDE CONTEXT ---
 
-                Format strictly using Markdown:
+                Generate a structured lesson plan following this format:
                 # Lesson Plan: {selected_class} — {selected_term}, {selected_week}
-                1. **Learning Objectives & Success Criteria** (SWBAT / WILF)
+                **Curriculum & Slide Alignment**: Identify the exact unit, scope focus, and key presentation slides referenced.
+
+                1. **Learning Objectives & Success Criteria** (SWBAT / WILF directly aligned with uploaded context)
                 2. **Starter / Hook Activity** (5–10 mins)
-                3. **Direct Instruction & Check for Understanding (CFU)** (With 3 targeted questions)
-                4. **Differentiated Practice Tasks**:
+                3. **Direct Instruction & CFU** (Integrates key presentation slide concepts with CFU questions)
+                4. **Differentiated Practice Tasks** (Incorporates PowerPoint activities with custom adjustments):
                    - *Support Tier (Scaffolded)*
                    - *Core Tier (Standard)*
                    - *Extension Tier (Advanced)*
                 5. **Plenary / Exit Ticket** (10 mins)
                 6. **Required Materials & Key Vocabulary**
                 """
-                with st.spinner(f"Building lesson plan for {selected_class}..."):
+                with st.spinner(f"Processing uploaded slides and curriculum for {selected_class}..."):
                     try:
                         res = client.models.generate_content(
                             model="gemini-3.8-flash",
@@ -190,13 +224,14 @@ if user_role == "Teacher Dashboard":
                 Create a {assess_type} with {num_q} questions for {selected_class} ({selected_term}, {selected_week}).
                 Included Formats: {', '.join(q_types)}
 
-                Context: {st.session_state['curriculum_text'] if st.session_state['curriculum_text'] else 'Standard Grade 12 competencies.'}
+                Context (Curriculum & Presentation Content): 
+                {st.session_state['curriculum_text'] if st.session_state['curriculum_text'] else 'Standard Grade 12 competencies.'}
 
                 Format in two distinct sections:
                 PART 1: Student Test Paper (Ready for print/copying).
                 PART 2: Teacher Answer Key with marking guidance and rubrics.
                 """
-                with st.spinner("Building assessment and answer keys..."):
+                with st.spinner("Building assessment based on slides and curriculum..."):
                     try:
                         res = client.models.generate_content(
                             model="gemini-3.8-flash",
