@@ -139,7 +139,7 @@ if user_role == "Teacher Dashboard":
                 with st.spinner(f"Building lesson plan for {selected_class}..."):
                     try:
                         res = client.models.generate_content(
-                            model="gemini-2.5-flash",
+                            model="gemini-3.8-flash",
                             contents=prompt_text
                         )
                         st.markdown(res.text)
@@ -199,7 +199,7 @@ if user_role == "Teacher Dashboard":
                 with st.spinner("Building assessment and answer keys..."):
                     try:
                         res = client.models.generate_content(
-                            model="gemini-2.5-flash",
+                            model="gemini-3.8-flash",
                             contents=prompt_text
                         )
                         st.markdown(res.text)
@@ -233,7 +233,7 @@ if user_role == "Teacher Dashboard":
                     with st.spinner("Formulating strategy..."):
                         try:
                             res = client.models.generate_content(
-                                model="gemini-2.5-flash",
+                                model="gemini-3.8-flash",
                                 contents=prompt_text
                             )
                             st.markdown(res.text)
@@ -293,7 +293,7 @@ else:
                 with st.spinner("Preparing your personalized exercise..."):
                     try:
                         res = client.models.generate_content(
-                            model="gemini-2.5-flash",
+                            model="gemini-3.8-flash",
                             contents=prompt_text
                         )
                         st.markdown(res.text)
